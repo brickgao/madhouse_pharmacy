@@ -1,1 +1,5 @@
 res/*.db
+ipch/*
+*.opensdf
+*.sdf
+Debug/*
