@@ -1,0 +1,46 @@
+{% extends "bootstrap_base.html" %}
+{% block title %}online madhouse pharmacy system{% endblock %}
+
+{%- block styles %}
+{{super()}}
+<link rel="stylesheet"
+      href="{{url_for('.static', filename='main.css')}}">
+<style type="text/css">
+</style>
+{%- endblock styles %}
+
+
+{% block content %}
+    <div class="container" style="width: 300px; margin-top: 120px;">
+        <form action="" method="post">
+            <h2 style="text-align: center">售药系统-登录</h2>
+            {% if err %}
+                <div class="alert alert-danger alert-dismissable">
+                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;
+                    </button>
+                    <strong>错误：</strong>{{ err }}
+                </div>
+            {% endif %}
+            <div class="input-group">
+                  <span class="input-group-addon">波特</span>
+                  <select class="form-control">
+                      <option>9600bps</option>
+                  </select>
+            </div>
+
+            <div class="input-group">
+                  <span class="input-group-addon">型号</span>
+                  <select class="form-control">
+                      <option>SLE_4442</option>
+                  </select>
+            </div>
+
+            <div class="input-group">
+                  <span class="input-group-addon">密码</span>
+                  <input type="password" class="form-control" required="true" name="pass" autofocus="true">
+            </div>
+            <input type="text" name="action" value="login" hidden="true">
+                <button type="submit" class="btn btn-block btn-primary">登录</button>
+        </form>
+    </div>
+{% endblock %}

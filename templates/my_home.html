@@ -1,0 +1,115 @@
+{% extends "bootstrap_base.html" %}
+{% block title %}online madhouse pharmacy system{% endblock %}
+
+{% block content%}
+<div class="container" style="width: 600px;">
+    {%if card.get('init')%}
+    <div class="page-header">
+        <h2>
+            账户信息
+            <button class="btn btn-success pull-right" onclick="logout()">
+            退出
+            </button>
+        </h2>
+    </div>
+
+    <div class="panel panel-default">
+        <div class="input-group">
+            <span class="input-group-addon">卡号</span>
+            <span class="form-control" >{{ card.get('uid') }}</span>
+        </div>
+        <div class="input-group">
+            <span class="input-group-addon">余额</span>
+            <span class="form-control" >{{  card.get('left')}}</span>
+        </div>
+    </div>
+
+    <div class="panel panel-default">
+        <form>
+        <div class="input-group">
+                  <input type="text" class="form-control" required="true" name="pass" autofocus="true" id='add_count'>
+                  <span class="btn btn-danger input-group-addon" onclick="add_count()">充值</span>
+        </div>
+
+        </form>
+    </div>
+    <div class="panel panel-default">
+
+        <form>
+                <div class="input-group">
+                  <input type="text" class="form-control" required="true" name="pass" autofocus="true" id='sub_count'>
+                  <span class="btn btn-danger input-group-addon" onclick="sub_count()">购药</span>
+        </div>
+        </form>
+    </div>
+    </div>
+    {%else%}
+    <div class="page-header">
+        <h2>卡未初始化，请先发卡
+            <button class="btn btn-success pull-right" onclick="init()">
+            发卡
+            </button>
+        </h2>
+    </div>
+    <div class="alert alert-danger alert-dismissable" id="errmsg" hidden="true">
+        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;
+        </button>
+        <strong>错误：</strong>发卡失败
+    </div>
+    {%endif%}
+</div>
+{% endblock%}
+
+{%block scripts%}
+{{super()}}
+<script type="text/javascript">
+    function logout(){
+        $.post('/',
+                {action: 'logout'}
+        ).done(function(data){
+                    location.reload()
+                })
+    }
+    function init(){
+        $.post('/',
+                {action: 'init'}
+        ).done(function(data){
+                    if(data == 'succeed'){
+                        alert('发卡成功')
+                        location.reload()
+                    }
+                    else{
+                        alert('发卡失败：' + data)
+                        //$('#errmsg').show()
+                    }
+                })
+    }
+    function add_count(){
+        $.post('/',
+                {action: 'add'}
+        ).done(function(data){
+            if(data == 'succeed'){
+                alert('充值成功')
+                location.reload()
+            }
+            else{
+                alert('充值失败' + data)
+                //$('this').show()
+            }
+        })
+    }
+    function sub_count(){
+        $.post('/',
+                {action: 'sub'}
+        ).done(function(data){
+                    if(data == 'succeed'){
+                        alert('购药成功')
+                        location.reload()
+                    }
+                    else{
+                        alert('购药失败：' + data)
+                    }
+                })
+    }
+</script>
+{%endblock%}
