@@ -2,4 +2,6 @@ Debug/*
 ipch/*
 *.sdf
 res/*
-.idea
+.idea/*
+Mwic_32.dll
+*.pyc
