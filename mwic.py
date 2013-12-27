@@ -61,7 +61,7 @@ def make_conn():
     return True, dev
 
 
-def check_password(dev):
+def check_password(dev, password):
     counter = c_int(0)
     err = ___.rsct_4442(dev, byref(counter))
 
@@ -72,7 +72,7 @@ def check_password(dev):
             log.info('password counter: %s', counter)
 
             # check user password
-            user_pwd_bytes = raw_input('password? ').strip().decode('hex')
+            user_pwd_bytes = password.strip().decode('hex')
 
             # if this does not work, try (c_ubyte * 3)(*(unpack('=BBB', p)))
             err = ___.csc_4442(dev, 3,
