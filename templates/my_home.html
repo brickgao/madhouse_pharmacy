@@ -85,22 +85,24 @@
                 })
     }
     function add_count(){
+        var $c = $("#add_count").val();
         $.post('/',
-                {action: 'add'}
+                {action: 'add', count: $c}
         ).done(function(data){
             if(data == 'succeed'){
                 alert('充值成功')
                 location.reload()
             }
             else{
-                alert('充值失败' + data)
+                alert('充值失败：' + data)
                 //$('this').show()
             }
         })
     }
     function sub_count(){
+        var $c = $("#sub_count").val();
         $.post('/',
-                {action: 'sub'}
+                {action: 'sub', count: $c}
         ).done(function(data){
                     if(data == 'succeed'){
                         alert('购药成功')
