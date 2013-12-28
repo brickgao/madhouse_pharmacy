@@ -133,7 +133,8 @@ def write_card(dev, card_dict):
     dummy_stream = StringIO()
     write = partial(write_with_counter, inc, dummy_stream, dev)
     transact_step = 0
-    for name, ((offset, length), shall_hash, is_transact, _, _) in card.spec[:-1]:
+    next_offset = -1
+    for name, ((offset, length), shall_hash, is_transact, _, _) in card.spec:
         val = card_dict[name]
 
         err, next_offset = write(offset, val, shall_hash)
@@ -144,28 +145,14 @@ def write_card(dev, card_dict):
                      length,
                      shall_hash,
                      val.encode('hex'))
+            if is_transact:
+                transact_step = (transact_step + 1) % 7
         else:
             log.error('error writing %s', name)
             return False
-        if is_transact:
-            transact_step = (transact_step + 1) % 7
 
-    val = card_dict['balance']
+    assert next_offset > 0
 
-    err, next_offset = write(next_offset, val, True)
-    if not err:
-        log.info('wrote %s (offset %s, %s bytes, hash %s): %s',
-                 'balance',
-                 next_offset,
-                 len(val),
-                 True,
-                 val.encode('hex'))
-    else:
-        log.error('error writing %s', 'balance')
-        return False
-    transact_step = (transact_step + 1) % 7
-
-    print pickle.loads(card_dict['balance'])
     hash_obj = hashlib.sha1()
     hash_obj.update(dummy_stream.getvalue() + 'hash salt')
     err, next_offset = write(next_offset, hash_obj.digest(), True)
@@ -176,10 +163,14 @@ def write_card(dev, card_dict):
                  hash_obj.digest_size,
                  hash_obj.digest().encode('hex'))
         transact_step = (transact_step + 1) % 7
+    else:
+        log.error('error writing hash')
+        return False
 
     compressed = zlib.compress(dummy_stream.getvalue(), 9)
     len_of_compressed = len(compressed)
-    err, next_offset = write(next_offset, struct.pack('!I', len_of_compressed), False)
+    err, next_offset = write(next_offset,
+                             struct.pack('!I', len_of_compressed), False)
     if not err:
         log.info('wrote %s (offset %s, %s bytes): %s',
                  'len of backup',
@@ -187,6 +178,9 @@ def write_card(dev, card_dict):
                  4,
                  struct.pack('!I', len_of_compressed).encode('hex'))
         transact_step = (transact_step + 1) % 7
+    else:
+        log.error('error writing length of backup')
+        return False
 
     err, next_offset = write(next_offset, compressed, False)
     if not err:
@@ -196,8 +190,21 @@ def write_card(dev, card_dict):
                  len(compressed),
                  compressed.encode('hex'))
         transact_step = (transact_step + 1) % 7
+    else:
+        log.error('error writing backup')
+        return False
 
-    err = ___.swr_4442(dev, 32, 1, create_string_buffer(struct.pack('!B', transact_step)))
+    err = ___.swr_4442(dev, 32, 1,
+                       create_string_buffer(struct.pack('!B', transact_step)))
+    if not err:
+        if not transact_step:
+            log.info('transaction completed successfully')
+        else:
+            log.warning('transaction incomplete')
+    else:
+        log.error('error writing transaction step')
+        return False
+
 
     log.info('wrote %s bytes in total', counter())
     return True
@@ -258,7 +265,9 @@ def ready(dev):
     hash_obj.update(hash_io.getvalue() + 'hash salt')
 
     if hash_obj.digest() != hash_buf.value:
-        log.warning('hash not match: %s, %s', hash_obj.hexdigest(), hash_buf.value.encode('hex'))
+        log.warning('hash not match: %s, %s',
+                    hash_obj.hexdigest(),
+                    hash_buf.value.encode('hex'))
         return d['backup']
     if d['transaction step'] != 0:
         return d['backup']
@@ -272,27 +281,24 @@ def restore_from_backup(dev, backup):
         log.error('restoration failed')
 
 
-def purchase(dev, card_dict, how_much):
+def modify_balance(dev, card_dict, how_much):
     card_dict = card_dict.copy()
+
     balance = card_dict['balance']
-    getcontext().prec = 2
-    cost = Decimal(how_much)
-    if balance >= cost:
-        print balance
-        balance = Decimal('%.2f' % (int(balance * 100) - int(Decimal(how_much) * 100) / 100.))
-        print balance
-    else:
-        return False
+    balance = Decimal('%.2f' %
+                      ((int(balance * 100) -
+                        int(Decimal(how_much) * 100)) / 100.))
+
     card_dict['balance'] = pickle.dumps(balance, protocol=-1)
     card_dict['length of balance'] = len(card_dict['balance'])
     card_dict['last used time'] = time.time()
     card_dict['used time'] += 1
 
-    canonical_card_dict(card_dict)
+    pack_dict(card_dict)
     return write_card(dev, card_dict)
 
 
-def canonical_card_dict(d):
+def pack_dict(d):
     for name, fmt in [('transaction step', '!B'),
                       ('creation time', '!I'),
                       ('expire time', '!I'),
@@ -320,7 +326,7 @@ if __name__ == '__main__':
         restore_from_backup(dev, this_card)
     elif isinstance(this_card, dict):
         print this_card
-        purchase(dev, this_card, '300.00')
+        modify_balance(dev, this_card, '300.00')
         print this_card
 
     this_card = ready(dev)
